@@ -1,0 +1,62 @@
+version: '3.6'
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    hostname: 'gitlab.example.com'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        # Add any other gitlab.rb configuration here, each on its own line
+        external_url 'http://localhost'
+        gitlab_rails['lfs_enabled']=true
+        ### Git LFS
+        gitlab_rails['lfs_enabled'] = true
+        # gitlab_rails['lfs_storage_path'] = "/var/opt/gitlab/gitlab-rails/shared/lfs-objects"
+        gitlab_rails['lfs_object_store_enabled'] = true
+        gitlab_rails['lfs_object_store_proxy_download'] = true
+        # gitlab_rails['lfs_object_store_remote_directory'] = "lfs-objects"
+        gitlab_rails['lfs_object_store_connection'] = {
+          'provider' => 'AWS',
+          'region' => 'us-east-1',
+          'aws_access_key_id' => 'UTj3siNsvCWDPbaFx8nV',
+          'aws_secret_access_key' => 'jDxqVmwjTYsbd2TfOLpAjkHAiMjVeVfODvtY3gpV',
+          # # The below options configure an S3 compatible host instead of AWS
+          # 'aws_signature_version' => 4, # For creation of signed URLs. Set to 2 if provider does not support v4.
+          'endpoint' => 'http://minio:9000/lfs-objects', # default: nil - Useful for S3 compliant services such as DigitalOcean Spaces
+          # 'host' => 's3.amazonaws.com',
+           'path_style' => true # Use 'host/bucket_name/object' instead of 'bucket_name.host/object'
+        }
+    ports:
+      - '80:80'
+      - '443:443'
+      - '22:22'
+    networks:
+      - tor
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+    shm_size: '256m'
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    networks:
+      - tor
+    volumes:
+      - './minio_data:/data'
+    command: server --address ":9000" --console-address ":9001" /data
+    environment:
+      - MINIO_ROOT_USER=root
+      - MINIO_ROOT_PASSWORD=12345678
+      - MINIO_DEFAULT_BUCKETS=store1
+networks:
+  tor:
+    driver: bridge
+    
+  
+
